@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Raining Vocab</title>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 20;
+            padding: 0;
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #canvas {
+            background-color: #A2D4FF; /* color of the game area */
+            width: 100%;
+            height: 88vh;
+            position: relative;
+            overflow: hidden;
+        }
+        #line {
+            border: 3px solid #FFA3D4; /* color of the bottom line */
+            border-right-width: 0px;
+            border-left-width: 0px;
+            margin: 0;
+            width: 100%;
+        }
+        #text {
+            font-size: 23px;
+            width: 300px;
+            height: 30px;
+            font-family: 'Century Gothic', sans-serif; /* font of the text box */
+        }
+        h5 {
+            font-family: 'Century Gothic', sans-serif; /* font of raining words */
+            font-size: 30px;
+            margin:0px;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #point, #life {
+            font-family: 'Century Gothic', sans-serif; /* font of the point and life */
+            font-size: 17px;
+        }
+    </style>
+    </head>
+    <body>
+        <div id="canvas"></div>
+        <hr id="line">
+        <div class="controls">
+            <input id="text" placeholder="text" onkeypress="keydown(event.keyCode)">
+            <button onclick="keydown(13)">Submit</button>
+            <div>
+                <b id="point"></b> / <b id="life"></b>
+            </div>
+        </div>
+    
+        <script type="text/javascript">
+            var canvasWidth = document.getElementById('canvas').offsetWidth;
+            var canvasHeight = document.getElementById('canvas').offsetHeight;
+    
+            // list of vocabs
+            var words = {
+                'apple': '사과',
+                'lion':'사자',
+                'tiger':'호랑이',
+                'computer':'컴퓨터',
+                'mouse':'쥐',
+                'lemonade':'레몬에이드',
+                'homework':'숙제',
+                'The United Kingdom':'영국',
+                'The republic of Korea':'대한민국',
+                'instagram':'인스타',
+                'rudin_w':'인경이',
+                'cute':'귀여운',
+                'Cat Cafe':'고양이 카페',
+                'map':'지도',
+                'Google':'구글',
+                'spotify':'스포티파이',
+                'window':'창문',
+                'Susan':'수잔',
+                'sleep':'잠',
+                'want':'원하다',
+                'feel':'기분',
+                'tired':'피곤한',
+                'program':'프로그램',
+                'achievement':'성취',
+                'house':'집',
+                'idol':'아이돌',
+                'Detective Conan':'명탐정 코난'
+            };
+            var wordKeys = Object.keys(words); // array of word keys
+            var wordsOnScreen = {}; // track active words on screen
+    
+            // shuffle the words array
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+    
+            shuffle(wordKeys);
+    
+            // default setting
+            var word_cnt = 0;
+            var point = 0; // points
+            var life = 30; // lives
+            var highestScore = 0; // highest score
+    
+            // initialize score and life
+            document.getElementById('point').innerHTML = "Score: " + point;
+            document.getElementById('life').innerHTML = "Life: " + life;
+    
+            // gameover
+            function gameover() {
+                clearInterval(setInterval1);
+                clearInterval(setInterval2);
+                if (point > highestScore) {
+                    highestScore = point;
+                }
+                document.body.innerHTML = "<h1>Hello Gerard</h1><h3>Highest Score: " + highestScore + "</h3><button onclick='location.reload()'><h3>Try Again</h3></button>";
+            }
+    
+            // remove word function from legacy code
+            function remove_node(pRemoveEle) {
+                if (pRemoveEle) {
+                    var vRemove = document.getElementById(pRemoveEle);
+                    if (vRemove) {
+                        var vParent = vRemove.parentNode;
+                        if (vParent) {
+                            vParent.removeChild(vRemove);
+                        }
+                    }
+                }
+            }
+    
+            // calculate random speed
+            function random_speed(maxSpeed) {
+                return (Math.random() * maxSpeed) + 0.4; // Slower speed
+            }
+    
+            // allocate the words in random location.
+            // if the word is spawned at the edge of the screen, it does not appear.
+            function random_width(word) {
+                var wordWidth = document.createElement('h5');
+                wordWidth.innerHTML = word;
+                wordWidth.style.visibility = 'hidden';
+                document.body.appendChild(wordWidth);
+                var width = wordWidth.offsetWidth;
+                document.body.removeChild(wordWidth);
+    
+                var position = Math.random() * (canvasWidth - width);
+                return position;
+            }
+    
+            // create and rain word
+            function wordRain() {
+                this.y = 0;
+                this.speed = random_speed(0.7);
+    
+                // make no duplicate words on screen
+                var availableWords = wordKeys.filter(word => !wordsOnScreen[word]);
+                if (availableWords.length === 0) return;
+    
+                var word = availableWords[Math.floor(Math.random() * availableWords.length)];
+    
+                this.node = document.createElement('h5');
+                this.node.id = word;
+                this.node.innerHTML = word;
+                wordsOnScreen[word] = true;
+    
+                this.node.style.position = 'absolute';
+                this.node.style.left = random_width(word) + 'px';
+    
+                document.getElementById('canvas').appendChild(this.node);
+    
+                // actual movement of words
+                wordRain.prototype.move = function () {
+                    if (this.y > canvasHeight - this.node.offsetHeight + 4) { // the area that words can move (default: 4px from the bottom)
+                        this.node.remove();
+                        this.y = this.speed = 0;
+                        delete wordsOnScreen[this.node.id]; // delete words hitting bottom
+                        life -= 1;
+                        document.getElementById('life').innerHTML = "Life: " + life;
+                        if (life < 1) gameover();
+                        return;
+                    }
+                    this.y += this.speed;
+                    this.node.style.top = this.y + 'px';
+                }
+            }
+    
+            // receive user input. enter key is also binded
+            function keydown(keyCode) {
+                if (keyCode == 13) { // enter key available
+                    var text = document.getElementById('text'); 
+                    
+                    if (Object.values(words).indexOf(text.value) !== -1) { // if input matches word meaning
+                        var word = Object.keys(words).find(key => words[key] === text.value);
+                        if (wordsOnScreen[word]) { // check if the word is currently on the screen
+                            remove_node(word);
+                            for (var i in game) {
+                                if (game[i]['node'].id == word) {
+                                    game[i]['y'] = 0;
+                                    game[i]['speed'] = 0;
+                                }
+                            }
+                            delete wordsOnScreen[word]; // remove from words on screen
+                            point += 1;
+                            document.getElementById('point').innerHTML = "Score: " + point;
+                        }
+                    }
+                    text.value = "";
+                }
+                return;
+            }
+            
+            var game = [];
+    
+            // interval to create new word rain every 2 seconds
+            var setInterval1 = setInterval(function () {
+                if (Object.keys(wordsOnScreen).length < 4) {
+                    game.push(new wordRain());
+                }
+            }, 2000); //change the number for slower spawning speed
+    
+            // interval to move word rain
+            var setInterval2 = setInterval(function () {
+                for (var x in game) { game[x].move(); }
+            }, 10); // change the number here for slower moving speed
+        </script>
+</body>
+</html>
